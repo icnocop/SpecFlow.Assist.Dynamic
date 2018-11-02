@@ -1,14 +1,13 @@
-﻿using System;
-using Should.Fluent;
+﻿using Should.Fluent;
 using TechTalk.SpecFlow;
 using TechTalk.SpecFlow.Assist;
+using SpecFlow.Assist.Dynamic;
 
 namespace Specs.Steps
 {
     [Binding]
     public class DynamicInstanceComparisionSteps
     {
-
         private const string EXCEPTION_KEY = "ExceptionKey";
 
         private static DynamicInstanceComparisonException GetInstanceComparisonException()
@@ -36,8 +35,6 @@ namespace Specs.Steps
                 ScenarioContext.Current.Add(EXCEPTION_KEY, ex);
             }
         }
-
-
 
         [Then("no instance comparison exception should have been thrown")]
         public void NoException()
@@ -90,13 +87,12 @@ namespace Specs.Steps
         {
             try
             {
-                table.CompareToDynamicInstance((object)State.OriginalInstance, false);
+                table.CompareToDynamicInstance((object)State.OriginalInstance, new Options { DoTypeConversion = false });
             }
             catch (DynamicInstanceComparisonException ex)
             {
                 ScenarioContext.Current.Add(EXCEPTION_KEY, ex);
             }
         }
-
     }
 }

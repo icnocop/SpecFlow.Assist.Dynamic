@@ -4,7 +4,7 @@ using System.Dynamic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using ImpromptuInterface;
-using ImpromptuInterface.InvokeExt;
+using SpecFlow.Assist.Dynamic;
 
 namespace TechTalk.SpecFlow.Assist
 {
@@ -24,68 +24,87 @@ namespace TechTalk.SpecFlow.Assist
             "A difference was found on row '{0}' for column '{1}' (property '{2}').\n\tInstance:\t'{3}'(type: {4}).\n\tTable:\t\t'{5}'(type: {6})";
 
         /// <summary>
-        /// Create a dynamic object from the headers and values of the <paramref name="table"/>
+        /// Create a dynamic object from the headers and values of the <paramref name="table" />
         /// </summary>
         /// <param name="table">the table to create a dynamic object from</param>
-        /// <param name="doTypeConversion">should types be converted according to conventions described in https://github.com/marcusoftnet/SpecFlow.Assist.Dynamic/wiki/Conversion-conventions#property-type-conversions</param>
+        /// <param name="options">The options.</param>
         /// <returns>the created object</returns>
-        public static ExpandoObject CreateDynamicInstance(this Table table, bool doTypeConversion = true)
+        public static ExpandoObject CreateDynamicInstance(this Table table, Options options = null)
         {
+            if (options == null)
+            {
+                options = new Options();
+            }
+
             if (table.Header.Count == 2 && table.RowCount > 1)
             {
                 var horizontalTable = CreateHorizontalTable(table);
-                return CreateDynamicInstance(horizontalTable.Rows[0], doTypeConversion);
+                return CreateDynamicInstance(horizontalTable.Rows[0], options);
             }
 
             if (table.RowCount == 1)
             {
-                return CreateDynamicInstance(table.Rows[0], doTypeConversion);
+                return CreateDynamicInstance(table.Rows[0], options);
             }
 
             throw new DynamicInstanceFromTableException(ERRORMESS_INSTANCETABLE_FORMAT);
         }
-        
 
         /// <summary>
-        /// Creates a set of dynamic objects based of the <paramref name="table"/> headers and values
+        /// Creates a set of dynamic objects based of the <paramref name="table" /> headers and values
         /// </summary>
         /// <param name="table">the table to create a set of dynamics from</param>
-        /// <param name="doTypeConversion">should types be converted according to conventions described in https://github.com/marcusoftnet/SpecFlow.Assist.Dynamic/wiki/Conversion-conventions#property-type-conversions</param>
+        /// <param name="options">The options.</param>
         /// <returns>a set of dynamics</returns>
-        public static IEnumerable<dynamic> CreateDynamicSet(this Table table, bool doTypeConversion = true)
+        public static IEnumerable<dynamic> CreateDynamicSet(this Table table, Options options = null)
         {
+            if (options == null)
+            {
+                options = new Options();
+            }
+
             return from r in table.Rows
-                   select CreateDynamicInstance(r, doTypeConversion);
+                   select CreateDynamicInstance(r, options);
         }
 
         /// <summary>
-        /// Validates if a dynamic instance <paramref name="instance"/> matches the <paramref name="table"/>
+        /// Validates if a dynamic instance <paramref name="instance" /> matches the <paramref name="table" />
         /// Throws descriptive exception if not
         /// </summary>
         /// <param name="table">the table to compare the instance against</param>
         /// <param name="instance">the instance to compare the table against</param>
-        /// <param name="doTypeConversion">should types be converted according to conventions described in https://github.com/marcusoftnet/SpecFlow.Assist.Dynamic/wiki/Conversion-conventions#property-type-conversions</param>
-        public static void CompareToDynamicInstance(this Table table, dynamic instance, bool doTypeConversion = true)
+        /// <param name="options">The options.</param>
+        public static void CompareToDynamicInstance(this Table table, dynamic instance, Options options = null)
         {
-            IList<string> propDiffs = GetPropertyDifferences(table, instance);
+            if (options == null)
+            {
+                options = new Options();
+            }
+
+            IList<string> propDiffs = GetPropertyDifferences(table, instance, options);
             if (propDiffs.Any())
                 throw new DynamicInstanceComparisonException(propDiffs);
 
-            AssertValuesOfRowDifference(table.Rows[0], instance, doTypeConversion);
+            AssertValuesOfRowDifference(table.Rows[0], instance, options);
         }
 
         /// <summary>
-        /// Validates that the dynamic set <paramref name="set"/> matches the <paramref name="table"/>
+        /// Validates that the dynamic set <paramref name="set" /> matches the <paramref name="table" />
         /// Throws descriptive exception if not
         /// </summary>
         /// <param name="table">the table to compare the set against</param>
         /// <param name="set">the set to compare the table against</param>
-        /// <param name="doTypeConversion">should types be converted according to conventions described in https://github.com/marcusoftnet/SpecFlow.Assist.Dynamic/wiki/Conversion-conventions#property-type-conversions</param>
-        public static void CompareToDynamicSet(this Table table, IList<dynamic> set, bool doTypeConversion = true)
+        /// <param name="options">The options.</param>
+        public static void CompareToDynamicSet(this Table table, IList<dynamic> set, Options options = null)
         {
+            if (options == null)
+            {
+                options = new Options();
+            }
+
             AssertEqualNumberOfRows(table, set);
 
-            IList<string> propDiffs = GetPropertyDifferences(table, set[0]);
+            IList<string> propDiffs = GetPropertyDifferences(table, set[0], options);
             if (propDiffs.Any())
             {
                 throw new DynamicSetComparisonException(ERRORMESS_PROPERTY_DIFF_SET, propDiffs);
@@ -93,7 +112,7 @@ namespace TechTalk.SpecFlow.Assist
 
             // Now we know that the table and the list has the same number of rows and properties
 
-            var valueDifference = GetSetValueDifferences(table, set, doTypeConversion);
+            var valueDifference = GetSetValueDifferences(table, set, options);
 
             if (valueDifference.Any())
             {
@@ -101,7 +120,7 @@ namespace TechTalk.SpecFlow.Assist
             }
         }
 
-        private static List<string> GetSetValueDifferences(Table table, IList<object> set, bool doTypeConversion = true)
+        private static List<string> GetSetValueDifferences(Table table, IList<object> set, Options options)
         {
             var memberNames = Impromptu.GetMemberNames(set[0]);
             var valueDifference = new List<string>();
@@ -110,56 +129,64 @@ namespace TechTalk.SpecFlow.Assist
             {
                 foreach (var memberName in memberNames)
                 {
-                  var currentHeader = string.Empty;
-                  var rowValue = GetRowValue(i, table, memberName, out currentHeader, doTypeConversion);
-                  var rowType = rowValue.GetType().Name;
-                  var instanceValue = Impromptu.InvokeGet(set[i], memberName);
-                  var instanceType = instanceValue.GetType().Name;
+                    var currentHeader = string.Empty;
+                    var rowValue = GetRowValue(i, table, memberName, out currentHeader, options);
 
-                  if (!instanceValue.Equals(rowValue))
-                  {
-                      var difference = string.Format(ERRORMESS_SET_VALUES_DIFFERS,
-                                                     i + 1, 
-                                                     currentHeader, 
-                                                     memberName, 
-                                                     instanceValue, 
-                                                     instanceType,
-                                                     rowValue,
-                                                     rowType);
+                    if ((rowValue.GetType() == typeof(string)) && ((string)rowValue == "NULL"))
+                    {
+                        rowValue = null;
+                    }
 
-                      valueDifference.Add(difference);
-                  }
+                    var instanceValue = Impromptu.InvokeGet(set[i], memberName);
+
+                    if (((instanceValue != null) || (rowValue != null))
+                        && !instanceValue.Equals((dynamic)rowValue))
+                    {
+                        var rowType = rowValue.GetType().Name;
+                        var instanceType = instanceValue.GetType().Name;
+
+                        var difference = string.Format(ERRORMESS_SET_VALUES_DIFFERS,
+                                                       i + 1,
+                                                       currentHeader,
+                                                       memberName,
+                                                       instanceValue,
+                                                       instanceType,
+                                                       rowValue,
+                                                       rowType);
+
+                        valueDifference.Add(difference);
+                    }
                 }
             }
             return valueDifference;
         }
 
-        private static object GetRowValue(int rowIndex, Table table, string memberName, out string currentHeader, bool doTypeConversion = true)
+        private static object GetRowValue(int rowIndex, Table table, string memberName, out string currentHeader, Options options)
         {
             object rowValue = null;
             currentHeader = string.Empty;
             foreach (var header in table.Header)
             {
-                if (CreatePropertyName(header) == memberName)
+                if (CreatePropertyName(header, options) == memberName)
                 {
                     currentHeader = header;
-                    rowValue = CreateTypedValue(table.Rows[rowIndex][header], doTypeConversion);
+                    rowValue = CreateTypedValue(table.Rows[rowIndex][header], options);
                     break;
                 }
             }
             return rowValue;
         }
 
-        private static void AssertValuesOfRowDifference(TableRow tableRow, dynamic instance, bool doTypeConversion = true)
+        private static void AssertValuesOfRowDifference(TableRow tableRow, dynamic instance, Options options)
         {
-            IList<string> valueDiffs = ValidateValuesOfRow(tableRow, instance, doTypeConversion);
+            IList<string> valueDiffs = ValidateValuesOfRow(tableRow, instance, options);
             if (valueDiffs.Any())
                 throw new DynamicInstanceComparisonException(valueDiffs);
         }
 
-        private static IList<string> GetPropertyDifferences(Table table, dynamic instance, bool doTypeConversion = true)
+        private static IList<string> GetPropertyDifferences(Table table, dynamic instance, Options options)
         {
-            var tableHeadersAsPropertyNames = table.Header.Select(CreatePropertyName);
+            var tableHeadersAsPropertyNames = table.Header.Select(x => CreatePropertyName(x, options));
             IEnumerable<string> instanceMembers = Impromptu.GetMemberNames(instance);
 
             return GetPropertyNameDifferences(tableHeadersAsPropertyNames, instanceMembers);
@@ -174,16 +201,16 @@ namespace TechTalk.SpecFlow.Assist
             }
         }
 
-        private static IList<string> ValidateValuesOfRow(TableRow tableRow, dynamic instance, bool doTypeConversion = true)
+        private static IList<string> ValidateValuesOfRow(TableRow tableRow, dynamic instance, Options options)
         {
             var valueDiffs = new List<string>();
 
             foreach (var header in tableRow.Keys)
             {
-                var propertyName = CreatePropertyName(header);
+                var propertyName = CreatePropertyName(header, options);
                 var valueFromInstance = Impromptu.InvokeGet(instance, propertyName);
                 var typeFromInstance = valueFromInstance.GetType().Name;
-                var valueFromTable = CreateTypedValue(tableRow[header], doTypeConversion);
+                var valueFromTable = CreateTypedValue(tableRow[header], options);
                 var typeFromTable = valueFromTable.GetType().Name;
 
                 if (!valueFromInstance.Equals(valueFromTable))
@@ -223,80 +250,39 @@ namespace TechTalk.SpecFlow.Assist
             return horizontalTable;
         }
 
-        private static ExpandoObject CreateDynamicInstance(TableRow tablerow, bool doTypeConversion = true)
+        private static ExpandoObject CreateDynamicInstance(TableRow tablerow, Options options)
         {
             dynamic expando = new ExpandoObject();
             var dicExpando = expando as IDictionary<string, object>;
 
             foreach (var header in tablerow.Keys)
             {
-                var propName = CreatePropertyName(header);
-                var propValue = CreateTypedValue(tablerow[header], doTypeConversion);
+                var propName = CreatePropertyName(header, options);
+                var propValue = CreateTypedValue(tablerow[header], options);
                 dicExpando.Add(propName, propValue);
             }
 
             return expando;
         }
 
-        private static object CreateTypedValue(string valueFromTable, bool doTypeConversion = true)
+        private static object CreateTypedValue(string valueFromTable, Options options)
         {
-            if (!doTypeConversion)
+            if (!options.DoTypeConversion)
                 return valueFromTable;
 
-            int i;
-            if (int.TryParse(valueFromTable, out i))
-                return i;
-
-            double db;
-            if (Double.TryParse(valueFromTable, out db))
-            {
-                decimal d;
-                if (Decimal.TryParse(valueFromTable, out d) && d.Equals((decimal)db))
-                {
-                    return db;
-                }
-                return d;
-            }
-
-            bool b;
-            if (Boolean.TryParse(valueFromTable, out b))
-                return b;
-
-            DateTime dt;
-            if (DateTime.TryParse(valueFromTable, out dt))
-                return dt;
-
-            return valueFromTable;
+            return options.PropertyValueParser.Parse(valueFromTable);
         }
 
-        private static string CreatePropertyName(string header)
+        private static string CreatePropertyName(string header, Options options)
         {
             var cleanedHeader = RemoveReservedChars(header);
-            var propName = FixCasing(cleanedHeader);
+            var propName = options.PropertyNameMapper.Map(cleanedHeader);
 
             // Throw if no chars in string
             if (propName.Length != 0) return propName;
-            
+
             var mess = string.Format("Property '{0}' only contains reserved C# characters", header);
             throw new DynamicInstanceFromTableException(mess);
-        }
-
-        private static string FixCasing(string header)
-        {
-            var arr = header.Split(' ');
-            var propName = arr[0]; // leave the first element as is, since it might be correct cased...
-
-            for (var i = 1; i < arr.Length; i++)
-            {
-                var s = arr[i];
-                if (s.Length > 0)
-                {
-                    propName += s[0].ToString().ToUpperInvariant() +
-                            s.Substring(1).ToLowerInvariant();
-                }
-            }
-
-            return propName;
         }
 
         private static string RemoveReservedChars(string orgPropertyName)

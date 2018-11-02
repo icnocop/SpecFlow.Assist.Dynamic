@@ -30,3 +30,15 @@ Scenario: Create dynamic instance from table with Field and Values
 		And the Age property should equal 39
 		And the BirthDate property should equal 1972-10-09
 		And the LengthInMeters property should equal 1.96
+
+Scenario: Create dynamic instance from table using a custom property name mapper
+	When I create a dynamic instance from this table using the "CustomPropertyNameMapper" property name mapper
+		| Customer ID |
+		| 123         |
+	Then the CustomerID property should equal '123'
+
+Scenario: Create dynamic instance from table using a custom property value parser
+	When I create a dynamic instance from this table using the "CustomPropertyValueParser" property value parser
+		| Age |
+		| -1  |
+	Then the Age property should equal 42

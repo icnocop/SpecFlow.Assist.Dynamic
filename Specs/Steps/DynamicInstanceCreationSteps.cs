@@ -1,20 +1,62 @@
 ﻿using System;
-using System.Collections.Generic;
 using Should.Fluent;
 using TechTalk.SpecFlow;
 using TechTalk.SpecFlow.Assist;
+using SpecFlow.Assist.Dynamic;
+using SpecFlow.Assist.Dynamic.PropertyNameMapping;
+using SpecFlow.Assist.Dynamic.PropertyValueParser;
+using System.Reflection;
+using System.Linq;
+using NUnit.Framework;
 
 namespace Specs.Steps
 {
     [Binding]
     public class DynamicInstanceCreationSteps
     {
-
         [Given(@"I create a dynamic instance from this table")]
         [When(@"I create a dynamic instance from this table")]
         public void CreateDynamicInstanceFromTable(Table table)
         {
             State.OriginalInstance = table.CreateDynamicInstance();
+        }
+
+        [When(@"I create a dynamic instance from this table using the ""(.*)"" property name mapper")]
+        public void WhenICreateADynamicInstanceFromThisTableUsingThePropertyNameMapper(string propertyNameMapper, Table table)
+        {
+            Type customPropertyNameMapperType = Assembly.GetExecutingAssembly().GetTypes()
+                .SingleOrDefault(x => x.GetInterfaces().Contains(typeof(IPropertyNameMapper))
+                    && x.Name.EndsWith(propertyNameMapper));
+
+            Assert.IsNotNull(customPropertyNameMapperType);
+
+            IPropertyNameMapper customPropertyNameMapper = Activator.CreateInstance(customPropertyNameMapperType) as IPropertyNameMapper;
+
+            Options options = new Options
+            {
+                PropertyNameMapper = customPropertyNameMapper
+            };
+
+            State.OriginalInstance = table.CreateDynamicInstance(options);
+        }
+
+        [When(@"I create a dynamic instance from this table using the ""(.*)"" property value parser")]
+        public void WhenICreateADynamicInstanceFromThisTableUsingThePropertyValueParser(string propertyValueParser, Table table)
+        {
+            Type customPropertyValueParserType = Assembly.GetExecutingAssembly().GetTypes()
+                .SingleOrDefault(x => x.GetInterfaces().Contains(typeof(IPropertyValueParser))
+                    && x.Name.EndsWith(propertyValueParser));
+
+            Assert.IsNotNull(customPropertyValueParserType);
+
+            IPropertyValueParser customPropertyNameMapper = Activator.CreateInstance(customPropertyValueParserType) as IPropertyValueParser;
+
+            Options options = new Options
+            {
+                PropertyValueParser = customPropertyNameMapper
+            };
+
+            State.OriginalInstance = table.CreateDynamicInstance(options);
         }
 
         [Then(@"the Name property should equal '(.*)'")]
@@ -32,7 +74,7 @@ namespace Specs.Steps
         [Then(@"the age property should equal (\d+)")]
         public void LowerCaseAgeShouldBe(int expectedAge)
         {
-            ((int) State.OriginalInstance.age).Should().Equal(expectedAge);
+            ((int)State.OriginalInstance.age).Should().Equal(expectedAge);
         }
 
         [Then(@"the BirthDate property should equal (.*)")]
@@ -41,21 +83,17 @@ namespace Specs.Steps
             ((DateTime)State.OriginalInstance.BirthDate).Should().Equal(DateTime.Parse(expectedDate));
         }
 
-
         [Then]
         public void ThenTheLengthInMetersPropertyShouldEqual_P0(double expectedLenghtInMeters)
         {
             CheckLengthInMeters(expectedLenghtInMeters);
-
         }
 
-        
         [Then(@"the LengthInMeters property should equal '(\d+\.\d+)'")]
         public void LengthInMeterShouldBe(double expectedLenghtInMeters)
         {
             CheckLengthInMeters(expectedLenghtInMeters);
         }
-
 
         [Then(@"the MolecularWeight property should equal '(\d+\.\d+)'")]
         public void MolecularWeightShouldBe(decimal expectedMolecularWeight)
@@ -63,13 +101,16 @@ namespace Specs.Steps
             CheckMolecularWeight(expectedMolecularWeight);
         }
 
-
+        [Then(@"the CustomerID property should equal '(.*)'")]
+        public void ThenTheCustomerIDPropertyShouldEqual(int expectedValue)
+        {
+            ((int)State.OriginalInstance.CustomerID).Should().Equal(expectedValue);
+        }
 
         private static void CheckLengthInMeters(double expectedLenghtInMeters)
         {
-            ((double) State.OriginalInstance.LengthInMeters).Should().Equal(expectedLenghtInMeters);
+            ((double)State.OriginalInstance.LengthInMeters).Should().Equal(expectedLenghtInMeters);
         }
-
 
         private static void CheckMolecularWeight(decimal expectedMolecularWeight)
         {
@@ -79,27 +120,25 @@ namespace Specs.Steps
         [Then(@"the SATScore should be (\d+)")]
         public void SATTest(int expectedScore)
         {
-            ((int) State.OriginalInstance.SATScore).Should().Equal(expectedScore);
+            ((int)State.OriginalInstance.SATScore).Should().Equal(expectedScore);
         }
 
         [Then(@"the IsDeveloper property should equal '(.*)'")]
         public void ThenTheIsDeveloperPropertyShouldEqualTrueAndBeOfTypeBool(bool expectedValue)
         {
-            ((bool) State.OriginalInstance.IsDeveloper).Should().Equal(expectedValue);
+            ((bool)State.OriginalInstance.IsDeveloper).Should().Equal(expectedValue);
         }
 
         [Then(@"the CharpNmeWithStrangeChars property should equal '(.*)'")]
         public void ThenTheCharpNmeWithStrangeCharsPropertyShouldEqual(string expectedValue)
         {
             ((string)State.OriginalInstance.CharpNmeWithStrangeChars).Should().Equal(expectedValue);
-
         }
 
         [Then(@"the My_Nice_Variable property should equal '(.*)'")]
         public void ThenTheMy_Nice_VariablePropertyShouldEqual(string expectedValue)
         {
             ((string)State.OriginalInstance.My_Nice_Variable).Should().Equal(expectedValue);
-
         }
 
         [Then(@"the MyVariableNeedsCleanUp property should equal '(.*)'")]
@@ -113,7 +152,7 @@ namespace Specs.Steps
         {
             try
             {
-                State.OriginalInstance = table.CreateDynamicInstance();                 
+                State.OriginalInstance = table.CreateDynamicInstance();
             }
             catch (DynamicInstanceFromTableException ex)
             {
@@ -133,7 +172,7 @@ namespace Specs.Steps
         [When(@"I create a dynamic instance from this table using no type conversion")]
         public void WhenICreateADynamicInstanceFromThisTableUsingNoTypeConversion(Table table)
         {
-            State.OriginalInstance = table.CreateDynamicInstance(false);
+            State.OriginalInstance = table.CreateDynamicInstance(new Options { DoTypeConversion = false });
         }
 
         [Then(@"the Name value should still be '(.*)'")]
@@ -152,7 +191,6 @@ namespace Specs.Steps
         public void ThenTheBirthDateShouldStilBe(string expectedValue)
         {
             ((string)State.OriginalInstance.BirthDate).Should().Equal(expectedValue);
-
         }
 
         [Then(@"length in meter should still be '(.*)'")]
@@ -160,6 +198,5 @@ namespace Specs.Steps
         {
             ((string)State.OriginalInstance.LengthInMeters).Should().Equal(expectedValue);
         }
-
     }
 }

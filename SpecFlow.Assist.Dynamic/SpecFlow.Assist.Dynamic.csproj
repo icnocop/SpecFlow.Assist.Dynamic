@@ -52,11 +52,16 @@
     <Compile Include="..\SolutionInfo.cs">
       <Link>SolutionInfo.cs</Link>
     </Compile>
+    <Compile Include="PropertyValueParser\DefaultPropertyValueParser.cs" />
+    <Compile Include="PropertyValueParser\IPropertyValueParser.cs" />
+    <Compile Include="Options.cs" />
+    <Compile Include="PropertyNameMapping\DefaultPropertyNameMapper.cs" />
     <Compile Include="DynamicInstanceComparisonException.cs" />
     <Compile Include="DynamicInstanceFromTableException.cs" />
     <Compile Include="DynamicSetComparisonException.cs" />
     <Compile Include="DynamicStepArgumentTransformations.cs" />
     <Compile Include="DynamicTableHelpers.cs" />
+    <Compile Include="PropertyNameMapping\IPropertyNameMapper.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

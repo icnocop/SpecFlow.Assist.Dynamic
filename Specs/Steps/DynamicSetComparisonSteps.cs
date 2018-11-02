@@ -1,4 +1,5 @@
 ﻿using Should.Fluent;
+using SpecFlow.Assist.Dynamic;
 using TechTalk.SpecFlow;
 using TechTalk.SpecFlow.Assist;
 
@@ -27,7 +28,7 @@ namespace Specs.Steps
             {
                 table.CompareToDynamicSet(State.OriginalSet);
             }
-            catch (DynamicSetComparisonException ex) 
+            catch (DynamicSetComparisonException ex)
             {
                 ScenarioContext.Current.Add(EXCEPTION_KEY, ex);
             }
@@ -38,7 +39,7 @@ namespace Specs.Steps
         {
             try
             {
-                table.CompareToDynamicSet(State.OriginalSet, false);
+                table.CompareToDynamicSet(State.OriginalSet, new Options { DoTypeConversion = false });
             }
             catch (DynamicSetComparisonException ex)
             {
@@ -66,7 +67,6 @@ namespace Specs.Steps
             GetSetComparisonException().Differences.Count.Should().Equal(expectedNumberOfDifference);
         }
 
-
         [Then(@"the error message for different rows should expect (.*) for table and (.*) for instance")]
         public void ShouldDifferInRowCount(string tableRowCountString, string instanceRowCountString)
         {
@@ -91,13 +91,11 @@ namespace Specs.Steps
         public void DifferenceOnValue(int differenceNumber, int rowNumber, string expectedProperty, string instanceValue, string tableRowValue)
         {
             var exception = GetSetComparisonException();
-            var difference = exception.Differences[differenceNumber -1];
+            var difference = exception.Differences[differenceNumber - 1];
             difference.Contains("'" + rowNumber + "'");
             difference.Contains("'" + expectedProperty + "'");
             difference.Contains("'" + instanceValue + "'");
             difference.Contains("'" + tableRowValue + "'");
         }
-
     }
-
 }

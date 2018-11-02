@@ -76,6 +76,7 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>CreateDynamicSetsAndInstancesWithStepArgumentTransformation.feature</DependentUpon>
     </Compile>
+    <Compile Include="PropertyNameMapping\CustomPropertyNameMapper.cs" />
     <Compile Include="DynamicInstancesFromTable.feature.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
@@ -87,6 +88,7 @@
       <DependentUpon>DynamicSetFromTable.feature</DependentUpon>
     </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="PropertyValueParser\CustomPropertyValueParser.cs" />
     <Compile Include="ReservedCharsInCSharp.feature.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
